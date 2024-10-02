@@ -1,0 +1,6 @@
+C:/Users/Рауф/Desktop/docker-install/1/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Рауф/Desktop/docker-install/1/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/Рауф/Desktop/docker-install/1/build/client/CMakeFiles/client.dir
+C:/Users/Рауф/Desktop/docker-install/1/build/client/CMakeFiles/ALL_BUILD.dir
+C:/Users/Рауф/Desktop/docker-install/1/build/server/CMakeFiles/server.dir
+C:/Users/Рауф/Desktop/docker-install/1/build/server/CMakeFiles/ALL_BUILD.dir
