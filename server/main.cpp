@@ -10,12 +10,6 @@
 
 #define DEFAULT_PORT "8080"
 
-enum Command {
-    TRACK_ACTIVITY,
-    REQUEST_SCREENSHOT,
-    INVALID_COMMAND
-};
-
 // Function to handle communication with each client in a separate thread
 void handleClient(SOCKET ClientSocket) {
     char recvbuf[512];
@@ -39,42 +33,6 @@ void handleClient(SOCKET ClientSocket) {
     // Shutdown the connection
     shutdown(ClientSocket, SD_SEND);
     closesocket(ClientSocket);
-}
-
-void sendCommandToClient(SOCKET ClientSocket, Command cmd) {
-    std::string message;
-    switch (cmd) {
-        case TRACK_ACTIVITY:
-            message = "TRACK_ACTIVITY";
-            break;
-        case REQUEST_SCREENSHOT:
-            message = "REQUEST_SCREENSHOT";
-            break;
-        default:
-            message = "INVALID_COMMAND";
-            break;
-    }
-
-    send(ClientSocket, message.c_str(), (int)message.length(), 0);
-}
-
-Command showMenu() {
-    std::cout << "\nMenu:\n";
-    std::cout << "1. Track Activity\n";
-    std::cout << "2. Request Screenshot\n";
-    std::cout << "Enter your choice: ";
-
-    int choice;
-    std::cin >> choice;
-
-    switch (choice) {
-        case 1:
-            return TRACK_ACTIVITY;
-        case 2:
-            return REQUEST_SCREENSHOT;
-        default:
-            return INVALID_COMMAND;
-    }
 }
 
 int main() {
@@ -137,6 +95,9 @@ int main() {
 
     std::cout << "Waiting for client connections..." << std::endl;
 
+    // Vector to hold threads
+    std::vector<std::thread> clientThreads;
+
     // Accept clients in a loop
     while (true) {
         SOCKET ClientSocket = accept(ListenSocket, NULL, NULL);
@@ -147,15 +108,15 @@ int main() {
 
         std::cout << "Client connected!" << std::endl;
 
-        // Show the menu and send the selected command to the client
-        Command cmd = showMenu();
-        if (cmd != INVALID_COMMAND) {
-            sendCommandToClient(ClientSocket, cmd);
-        }
+        // Handle each client in a separate thread
+        clientThreads.emplace_back(handleClient, ClientSocket);
+    }
 
-        // Handle each client in a separate thread for receiving data
-        std::thread clientThread(handleClient, ClientSocket);
-        clientThread.detach(); // Detach the thread to handle multiple clients simultaneously
+    // Clean up
+    for (auto& t : clientThreads) {
+        if (t.joinable()) {
+            t.join();
+        }
     }
 
     closesocket(ListenSocket);
