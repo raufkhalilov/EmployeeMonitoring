@@ -11,11 +11,21 @@
 #define SERVER_IP "127.0.0.1"
 #define DEFAULT_PORT "8888"
 
-// Флаг для управления выходом из функции sendIdleTime
-bool stopIdleMonitoring = false;
+// Функция для получения времени простоя в секундах
+int getIdleTime() {
+    // Получаем время последней активности пользователя
+    LASTINPUTINFO lii;
+    lii.cbSize = sizeof(LASTINPUTINFO);
+    GetLastInputInfo(&lii);
 
+    // Вычисляем время простоя
+    DWORD idleTime = (GetTickCount() - lii.dwTime) / 1000; // в секундах
+    return static_cast<int>(idleTime);
+}
+
+// Функция для захвата экрана (по вашему выбору)
 void captureScreen(SOCKET connectSocket) {
-    std::string command = "screenshot";
+    std::string command = "capture";
     send(connectSocket, command.c_str(), (int)command.length(), 0);
     std::cout << "Screenshot request sent." << std::endl;
 
@@ -30,33 +40,16 @@ void captureScreen(SOCKET connectSocket) {
     }
 }
 
+// Функция для отправки времени простоя на сервер
 void sendIdleTime(SOCKET connectSocket) {
-    stopIdleMonitoring = false; // Сброс флага перед началом мониторинга
+    while (true) {
+        Sleep(5000); // Проверяем каждые 5 секунд
+        int idleTime = getIdleTime(); // Получаем реальное время простоя
 
-    while (!stopIdleMonitoring) {
-        LASTINPUTINFO lii = { 0 };
-        lii.cbSize = sizeof(LASTINPUTINFO);
-
-        if (GetLastInputInfo(&lii)) {
-            DWORD currentTime = GetTickCount();
-            DWORD idleTime = (currentTime - lii.dwTime) / 1000;
-
-            std::string message = "idle:" + std::to_string(idleTime);
-            std::cout << "Sending: " << message << std::endl;
-
-            // Отправка сообщения на сервер
-            int iResult = send(connectSocket, message.c_str(), (int)message.length(), 0);
-            if (iResult == SOCKET_ERROR) {
-                std::cerr << "Send failed: " << WSAGetLastError() << std::endl;
-                break;
-            }
-        }
-
-        // Ожидание 5 секунд перед отправкой снова
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::string message = "idle_time:" + std::to_string(idleTime);
+        send(connectSocket, message.c_str(), (int)message.length(), 0);
+        std::cout << "Idle time sent to server: " << idleTime << " seconds." << std::endl;
     }
-
-    std::cout << "Stopped monitoring idle time." << std::endl;
 }
 
 int main() {
@@ -66,19 +59,16 @@ int main() {
     int iResult;
 
     // Инициализация WinSock
-    iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (iResult != 0) {
-        std::cerr << "WSAStartup failed: " << iResult << std::endl;
-        return 1;
-    }
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-    // Настройка соединения
+    // Настройка адреса подключения
     ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_family = AF_INET; // IPv4
+    hints.ai_socktype = SOCK_STREAM; // TCP
     hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_flags = AI_PASSIVE;
 
-    // Разрешение адреса сервера
+    // Получение информации о сервере
     iResult = getaddrinfo(SERVER_IP, DEFAULT_PORT, &hints, &result);
     if (iResult != 0) {
         std::cerr << "getaddrinfo failed: " << iResult << std::endl;
@@ -96,10 +86,15 @@ int main() {
         }
 
         iResult = connect(connectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+        if (iResult == SOCKET_ERROR) {
+            closesocket(connectSocket);
+            connectSocket = INVALID_SOCKET;
+            continue;
+        }
         break;
     }
 
-    freeaddrinfo(result);
+    freeaddrinfo(result); // Освобождение ресурсов
 
     if (connectSocket == INVALID_SOCKET) {
         std::cerr << "Unable to connect to server!" << std::endl;
@@ -109,42 +104,34 @@ int main() {
 
     std::cout << "Connected to server!" << std::endl;
 
+    // Обработка команд от сервера в отдельном потоке
+    std::thread idleThread(sendIdleTime, connectSocket);
+    idleThread.detach(); // Отделяем поток
+
+    // Обработка команд от сервера
+    char recvbuf[512];
+    int recvbuflen = 512;
     while (true) {
-        std::cout << "\nChoose an action:\n";
-        std::cout << "1. Capture Screen\n";
-        std::cout << "2. Monitor Idle Time\n";
-        std::cout << "3. Exit\n";
-        std::cout << "Enter your choice: ";
-        
-        int choice;
-        std::cin >> choice;
+        int result = recv(connectSocket, recvbuf, recvbuflen, 0);
+        if (result > 0) {
+            recvbuf[result] = '\0';
+            std::cout << "Received command: " << recvbuf << std::endl;
 
-        if (choice == 1) {
-            captureScreen(connectSocket);
-        } else if (choice == 2) {
-            std::cout << "Monitoring idle time. Press Ctrl+C to stop." << std::endl;
-
-            // Запуск мониторинга в отдельном потоке
-            std::thread idleMonitor(sendIdleTime, connectSocket);
-            
-            // Ожидание завершения мониторинга
-            std::cout << "Press Enter to stop monitoring idle time.\n";
-            std::cin.ignore(); // Игнорирование остаточного '\n' от предыдущего ввода
-            std::cin.get();    // Ожидание нажатия Enter
-
-            // Завершение мониторинга
-            stopIdleMonitoring = true;
-            idleMonitor.join();
-        } else if (choice == 3) {
-            std::cout << "Exiting the program." << std::endl;
-            break; // Выход из программы
+            if (strcmp(recvbuf, "capture") == 0) {
+                captureScreen(connectSocket);
+            } else if (strcmp(recvbuf, "exit") == 0) {
+                std::cout << "Server requested to close connection." << std::endl;
+                break;
+            }
+        } else if (result == 0) {
+            std::cout << "Connection closed." << std::endl;
+            break;
         } else {
-            std::cout << "Invalid choice, please try again." << std::endl;
+            std::cerr << "recv failed: " << WSAGetLastError() << std::endl;
+            break;
         }
     }
 
-    // Корректное завершение соединения
-    shutdown(connectSocket, SD_SEND);
     closesocket(connectSocket);
     WSACleanup();
 
