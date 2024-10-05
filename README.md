@@ -33,7 +33,7 @@ cd EmployeeMonitoring
 
 1. Скомпилируйте и запустите серверный код:
    ```bash
-   g++ -o server server.cpp -lws2_32
+   g++ server.cpp -o server -lgdi32 -lgdiplus -lws2_32
    ./server
    ```
 
@@ -46,7 +46,7 @@ cd EmployeeMonitoring
 
 1. Скомпилируйте и запустите клиентский код:
    ```bash
-   g++ -o client client.cpp -lws2_32 -lgdiplus
+   g++ -o client.exe client.cpp -lws2_32 -lgdi32 -lgdiplus -lole32
    ./client
    ```
 
