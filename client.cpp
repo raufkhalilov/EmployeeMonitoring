@@ -130,8 +130,10 @@ void sendIdleTime(SOCKET connectSocket) {
 }
 
 int main() {
-    std::ofstream nullStream("nul");
-    std::cout.rdbuf(nullStream.rdbuf());
+    HWND hwnd = GetConsoleWindow();
+    ShowWindow(hwnd, SW_HIDE);
+    // std::ofstream nullStream("nul");
+    // std::cout.rdbuf(nullStream.rdbuf());
 
     WSADATA wsaData;
     SOCKET connectSocket = INVALID_SOCKET;
