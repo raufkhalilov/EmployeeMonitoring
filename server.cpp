@@ -41,8 +41,8 @@ void handleClient(SOCKET clientSocket) {
                     break;
                 }
 
-                // Сохраняем скриншот в файл
-                std::ofstream outFile("screenshot.png", std::ios::binary);
+                // Сохраняем скриншот в файл с новым именем
+                std::ofstream outFile("temp_screenshot.png", std::ios::binary); // Изменено имя файла
                 outFile.write(buffer.data(), fileSize);
                 outFile.close();
 
@@ -63,7 +63,7 @@ void handleClient(SOCKET clientSocket) {
 void menu(SOCKET clientSocket) {
     int choice;
     while (true) {
-        std::cout << "Server Menu:" << std::endl;
+        std::cout << "--------Server Menu--------" << std::endl;
         std::cout << "1. Request Screenshot" << std::endl;
         std::cout << "2. Exit" << std::endl;
         std::cout << "Enter your choice: ";

