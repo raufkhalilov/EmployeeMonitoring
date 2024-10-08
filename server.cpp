@@ -33,7 +33,9 @@ void handleClient(SOCKET clientSocket) {
                     break;
                 }
 
+                // Устанавливаем размер вектора до получения данных
                 std::vector<char> buffer(fileSize);
+
                 // Получаем файл
                 result = recv(clientSocket, buffer.data(), fileSize, 0);
                 if (result <= 0) {
@@ -41,7 +43,10 @@ void handleClient(SOCKET clientSocket) {
                     break;
                 }
 
-                std::ofstream outFile("temp_screenshot.png", std::ios::binary); // Изменено имя файла
+                // Удаление старого файла, если он существует
+                std::remove("temp_screenshot.png");
+
+                std::ofstream outFile("temp_screenshot.png", std::ios::binary);
                 outFile.write(buffer.data(), fileSize);
                 outFile.close();
 
